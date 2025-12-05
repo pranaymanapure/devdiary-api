@@ -158,4 +158,91 @@ const logoutUser = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
-export { registerUser, loginUser, getCurrentUser, logoutUser };
+const updateUserDetails = asyncHandler(async (req, res) => {
+    const { fullname, email } = req.body;
+
+    if (!fullname && !email) {
+        throw new ApiError(400, "Please provide email or fullname to update.");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) throw new ApiError(404, "User not found");
+
+    if (fullname) user.fullname = fullname;
+    if (email) user.email = email;
+
+    await user.save({ validateBeforeSave: true });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "User details updated successfully"));
+});
+
+const changeUserPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(400, "Old and new password are required");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) throw new ApiError(404, "User not found");
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(401, "Incorrect old password");
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: true });
+
+    return res.json(
+        new ApiResponse(200, null, "Password changed successfully")
+    );
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalPath = req.file?.path;
+
+    if (!avatarLocalPath) {
+        throw new ApiError(400, "Avatar file is required");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) throw new ApiError(404, "User not found");
+
+    // Delete old avatar
+    if (user.avatarCloudinaryId) {
+        await deleteFromCloudinary(user.avatarCloudinaryId);
+    }
+
+    // Upload new avatar
+    const avatarUpload = await uploadOnCloudinary(avatarLocalPath);
+
+    if (!avatarUpload) {
+        throw new ApiError(500, "Failed to upload avatar");
+    }
+
+    user.avatar = avatarUpload.secure_url;
+    user.avatarCloudinaryId = avatarUpload.public_id;
+
+    await user.save({ validateBeforeSave: false });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Avatar updated successfully"));
+});
+
+export {
+    registerUser,
+    loginUser,
+    getCurrentUser,
+    logoutUser,
+    updateUserDetails,
+    changeUserPassword,
+    updateUserAvatar,
+};

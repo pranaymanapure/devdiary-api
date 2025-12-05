@@ -13,4 +13,8 @@ import userRoutes from "./routes/user.routes.js";
 app.use("/api/users", userRoutes);
 app.use("/api/healthcheck", healthcheckRoutes);
 
+import blogRoutes from "./routes/blog.routes.js";
+
+app.use("/api/blogs", blogRoutes);
+
 export default app;
