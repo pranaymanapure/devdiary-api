@@ -116,12 +116,31 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
 });
 
 const getAllBlogs = asyncHandler(async (req, res) => {
-    const blogs = await Blog.find({ visibility: true }).populate(
-        "author",
-        "fullname avatar"
-    );
+    const { page = 1, limit = 10 } = req.query;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const skip = (pageNum - 1) * limitNum;
 
-    return res.json(new ApiResponse(200, blogs, "Blogs fetched"));
+    const blogs = await Blog.find({ visibility: true })
+        .populate("author", "fullname avatar")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+
+    const totalBlogs = await Blog.countDocuments({ visibility: true });
+
+    return res.json(
+        new ApiResponse(
+            200,
+            {
+                blogs,
+                totalPages: Math.ceil(totalBlogs / limitNum),
+                currentPage: pageNum,
+                totalBlogs,
+            },
+            "Blogs fetched successfully"
+        )
+    );
 });
 
 const getMyBlogs = asyncHandler(async (req, res) => {

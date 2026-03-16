@@ -25,11 +25,12 @@ const generateAccessAndRefreshToken = async (userID) => {
     }
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const cookiesOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "None",
-    // domain: process.env.FRONTEND_DOMAIN,
+    secure: isProduction,
+    sameSite: isProduction ? "None" : "Lax",
 };
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -55,12 +56,6 @@ const registerUser = asyncHandler(async (req, res) => {
         req.files.avatar.length > 0
     ) {
         avatarLocalPath = req?.files?.avatar[0].path;
-    } else {
-        throw new ApiError(400, "Avatar image is missing");
-    }
-
-    if (!avatarLocalPath) {
-        throw new ApiError(400, "Avatar image is required");
     }
 
     // check if email is valid
@@ -69,21 +64,28 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Please provide a valid Gmail address");
     }
 
-    // upload image to cloudinary
-    const avatar = await uploadOnCloudinary(avatarLocalPath, "Avatar");
-    if (!avatar) {
-        throw new ApiError(
-            500,
-            "Error while uploading avatar image on cloudinary"
-        );
+    // upload image to cloudinary (only if avatar was provided)
+    let avatarUrl = "";
+    let avatarCloudinaryId = "";
+
+    if (avatarLocalPath) {
+        const avatar = await uploadOnCloudinary(avatarLocalPath, "Avatar");
+        if (!avatar) {
+            throw new ApiError(
+                500,
+                "Error while uploading avatar image on cloudinary"
+            );
+        }
+        avatarUrl = avatar.secure_url;
+        avatarCloudinaryId = avatar.public_id;
     }
 
     const user = await User.create({
         email,
         password,
         fullname,
-        avatar: avatar.secure_url,
-        avatarCloudinaryId: avatar.public_id,
+        avatar: avatarUrl,
+        avatarCloudinaryId: avatarCloudinaryId,
     });
 
     const createdUser = await User.findById(user._id).select(

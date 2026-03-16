@@ -26,11 +26,11 @@ const userSchema = new Schema(
         },
         avatar: {
             type: String,
-            required: true,
+            default: "",
         },
         avatarCloudinaryId: {
             type: String,
-            required: true,
+            default: "",
         },
         refreshTokens: {
             type: String,
@@ -75,31 +75,5 @@ userSchema.methods.generateRefreshToken = async function () {
     );
 };
 
-userSchema.methods.addToWatchHistory = async function (videoId) {
-    if (this.watchHistory.includes(videoId)) {
-        const errorMessage = "Video is already added to watch history";
-        // console.error("Error in addToWatchHistory ::", errorMessage)
-        return errorMessage;
-    } else {
-        this.watchHistory.push(videoId);
-        await this.save({ validateBeforeSave: false });
-        const successMessage = "Video added to the watch history.";
-        return successMessage;
-    }
-};
-
-userSchema.methods.removeFromWatchHistory = async function (videoId) {
-    const index = this.watchHistory.indexOf(videoId);
-    if (index !== -1) {
-        this.watchHistory.splice(index, 1);
-        await this.save({ validateBeforeSave: false });
-        const successMessage = "Video removed from the watch history.";
-        return successMessage;
-    } else {
-        const errorMessage = "This video is not in the watch history.";
-        console.error("Error in removeFromWatchHistory ::", errorMessage);
-        return errorMessage;
-    }
-};
 
 export const User = mongoose.model("User", userSchema);
